@@ -27,8 +27,13 @@ mongoose
 // access   Public access
 app.get('/', (req, res) => res.send('hey there!!'));
 
-// Route the call to the corresponsding js file
+// Route the call to the corresponding js file
 app.use('/api/users', users);
+app.get('/api/users', (req, res) => {
+  console.log('Successful in users');
+  return res.send('In the users page');
+});
+
 app.use('/api/profile', profile);
 app.use('/api/posts', posts);
 
