@@ -3,6 +3,11 @@ const User = require('../../models/User');
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const key = require('../../config/keys');
+const passport = require('passport');
+const validateRegisterInput = require('../../validations/register');
+const validateLoginInput = require('../../validations/login');
 
 router.get('/register', (req, res) => res.send('In the register page!')); // response received on browser
 
@@ -10,8 +15,12 @@ router.get('/register', (req, res) => res.send('In the register page!')); // res
 // @desc    Register User
 // @access  Public
 router.post('/register', (req, res) => {
-  console.log('at the beginning of the post route');
-  console.log(req.body.email);
+  // Validation here...
+  const {errors, isValid} = validateRegisterInput(req.body);
+  if(!isValid){
+    return res.status(400).json(errors);
+  }
+
   User.findOne({email: req.body.email})
       .then(user => {
         console.log(`User: ${user}`);
@@ -37,14 +46,17 @@ router.post('/register', (req, res) => {
           console.log(`Success at creating a new User: ${newUser}`);
           
           // Hashing of password
-          bcrypt.genSalt(100, (err, salt) => {
+          bcrypt.genSalt(10, (err, salt) => {
             console.log(`generated Salt: ${salt}`); // Successful till here
             
             if(err) throw err;
-            bcrypt.hash(newUser.password, salt, (err, hash) => {
-            console.log(`salt: ${salt}`);
-            //  if(err) throw err;
             
+            bcrypt.hash(newUser.password, salt, (err, hash) => {
+            
+               if(err) {
+                console.log('Error in the hash function'); 
+                throw err};
+              console.log(`salt: ${salt}`);
               newUser.password = hash;
               newUser.save()
                 .then(user => res.json(user))
@@ -55,6 +67,64 @@ router.post('/register', (req, res) => {
       })
       .catch(err => console.log(`Uber error: ${err}`))   
 });
+
+// @route   POST /api/users/login
+// @desc    Login user page
+// @access  Public
+router.post('/login', (req,res) => {
+  // Validate email and password
+  const {errors, isValid} = validateLoginInput(req.body);
+  if(!isValid){
+    return res.status(400).json(errors);
+  }
+
+  User.findOne({email: req.body.email})
+      .then(user => {
+        if(!user){
+          res.status(400).json({email: 'Email not found.'});
+        }else{
+          bcrypt.compare(req.body.password, user.password, (err, isMatch) => {
+            if(err) throw err;
+            if(isMatch){
+              // create payload
+              const payload = {
+                name: user.name,
+                id: user.id,
+                avatar: user.avatar
+              };
+              // sign the token
+              jwt.sign(payload, key.secret, {expiresIn: 7200}, (err, token) => {
+                if(err) throw err;
+                if(token){
+                  res.status(200).json({
+                    msg: 'Success generating token',
+                    token: 'Bearer ' + token
+                  })
+                }
+              })
+            }else{
+              // Passwords did not match
+              res.status(400).json({password: 'Incorrect Password'});
+            }
+          })
+        }
+      })
+      .catch(err => `User.findOne error ${err}`);
+})
+
+// @route   /api/users/current
+// @desc    Return the current user information
+// @ access Private - this means there is an added layer in between the route and call back function
+router.get('/current',
+            passport.authenticate('jwt', ({session: false})),
+            (req, res) => {
+              //console.log('control passed to callback function in current route');
+              res.json({
+                id: req.user.id,
+                email: req.user.email,
+                name: req.user.name
+              });
+            })
 
 // Export the route
 module.exports = router;
