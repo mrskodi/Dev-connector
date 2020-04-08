@@ -23,7 +23,7 @@ router.post('/register', (req, res) => {
 
   User.findOne({email: req.body.email})
       .then(user => {
-        console.log(`User: ${user}`);
+        //console.log(`User: ${user}`);
         if(user){
           return res.status(400).json({email: 'Email already exists!'})
         }else{
@@ -34,7 +34,7 @@ router.post('/register', (req, res) => {
             r: 'pg',
             d: 'mm'
           });
-          console.log(`Success at Creating a new avatar: ${avatar}`);
+          //console.log(`Success at Creating a new avatar: ${avatar}`);
           
           // Create a User using the schema
           const newUser = new User({
@@ -43,20 +43,20 @@ router.post('/register', (req, res) => {
             password: req.body.password, // Plain text password, for security reasons should be     hashed.
             avatar: avatar,
           });
-          console.log(`Success at creating a new User: ${newUser}`);
+          //console.log(`Success at creating a new User: ${newUser}`);
           
           // Hashing of password
           bcrypt.genSalt(10, (err, salt) => {
-            console.log(`generated Salt: ${salt}`); // Successful till here
+            //console.log(`generated Salt: ${salt}`); // Successful till here
             
             if(err) throw err;
             
             bcrypt.hash(newUser.password, salt, (err, hash) => {
             
                if(err) {
-                console.log('Error in the hash function'); 
+                //console.log('Error in the hash function'); 
                 throw err};
-              console.log(`salt: ${salt}`);
+              //console.log(`salt: ${salt}`);
               newUser.password = hash;
               newUser.save()
                 .then(user => res.json(user))
