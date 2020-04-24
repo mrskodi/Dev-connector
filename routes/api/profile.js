@@ -4,12 +4,8 @@ const passport = require('passport');
 const Profile = require('../../models/Profile');
 // Import validations
 const validateProfileInput = require('../../validations/profile');
-
-// Test the route
-// @route   GET /api/profile/test
-// desc     tests profile route
-// access   Public access
-router.get(('/test'), (req, res) => res.json({msg: 'Profile works!'}));
+const validateExperienceInput = require('../../validations/experience');
+const validateEducationInput = require('../../validations/education');
 
 // @route   POST /api/profile/
 // desc     Create or edit user profile
@@ -64,7 +60,7 @@ router.post('/', passport.authenticate('jwt', {session: false}), (req, res) =>
                     .then(handle => {
                       if(handle){
                         errors.handle = 'Handle already exists';
-                        res.status(400).json(errors);
+                        return res.status(400).json(errors);
                       }
                       // Else, save profile
                       new Profile(profileFields)
@@ -99,7 +95,7 @@ router.get('/', passport.authenticate('jwt', {session: false}), (req, res) => {
 // @route   GET /api/profile/all
 // desc     get all profiles
 // access   Public
-router.get('/all', (req, res) => {
+router.get('/all', (req, res) => { 
   const errors = {};
 
   Profile.find()
@@ -125,11 +121,11 @@ router.get('/handle/:userHandle', (req, res) => {
         .then(profile => {
           if(!profile){
             errors.noProfile = 'Profile does not exist for this user';
-            return res.status(400).json(errors);
+            res.status(400).json(errors);
           }
-          return res.json(profile);
+          res.json(profile);
         })
-        .catch(err => console.log(err));
+        .catch(err => res.status(404).json(err));
 })
 
 // @route   /api/profile/userid/:user_id
@@ -149,6 +145,135 @@ router.get('/userid/:user_id', (req, res) => {
         })
         .catch(err => console.log(err));
 });
+
+// @route   /api/profile/experience
+// @access  PRIVATE
+// @desc    Add experience
+router.post('/experience', passport.authenticate('jwt', {session: false}), (req, res) => {
+  // validation here...
+  const { errors, isValid } = validateExperienceInput(req.body);
+  if(!isValid){
+    // return errors with status 400
+    return res.status(400).json(errors);
+  }
+
+  // No errors, procede with creating experience
+  Profile.findOne({user: req.user.id})
+         .then(profile => {
+           // Create an exp object and populate its fields
+            const newExp = {};
+          
+            newExp.title = req.body.title;
+            newExp.company = req.body.company;
+            if(req.body.location) newExp.location = req.body.location;
+            newExp.from = req.body.from;
+            if(req.body.to) newExp.to = req.body.to;
+            if(req.body.desc) newExp.desc = req.body.desc;
+
+            // Add new exp to exp array in profile
+            profile.experience.unshift(newExp);
+            // save the profile
+            profile.save()
+                   .then(profile => res.json(profile));
+         })
+         .catch(err => console.log(err));
+})
+
+// @route   /api/profile/education
+// @access  PRIVATE
+// @desc    Add education
+router.post('/education', passport.authenticate('jwt', {session: false}), (req,res) => {
+  // validations here...
+  const {errors, isValid} = validateEducationInput(req.body);
+  if(!isValid){
+    // return errors
+    return res.status(404).json(errors);
+  }
+
+  Profile.findOne({user: req.user.id})
+         .then(profile => {
+           // Create a edu object
+           const newEdu = {};
+
+           // Populate the newEdu with fields
+           newEdu.school = req.body.school;
+           newEdu.degree = req.body.degree;
+           newEdu.fieldOfStudy = req.body.fieldOfStudy;
+           newEdu.from = req.body.from;
+           if(req.body.to) newEdu.to = req.body.to;
+
+           // Add the newEdu to the education array of the profile
+           profile.education.unshift(newEdu);
+           // save the profile
+           profile.save()
+                  .then(profile => res.json(profile));
+
+         })
+         .catch(err => console.log(err));
+})
+
+// @route   /api/profile/experience
+// @access  PRIVATE
+// @desc    delete an existing experience
+router.delete('/experience/:exp_id', passport.authenticate('jwt', {session: false}), (req, res) =>{
+  let errors = {};
+
+  // Locate the profile
+  Profile.findOne({user: req.user.id})
+         .then(profile => {
+           if(!profile){
+             errors.profileNotFound = 'Profile does not exist';
+             return res.status(404).json(errors);
+           }else{
+           // find out the index in which exp_id is stored in experience[]
+           const removeIndex = profile.experience
+                                      .map(item => item.id)
+                                      .indexOf(req.params.exp_id);
+           if(removeIndex === -1){
+             errors.experienceNotFound = 'Experience Not found'
+             return res.status(404).json(errors);
+           }                           
+
+           // Index found, splice the array
+           profile.experience.splice(removeIndex, 1);
+           // save the profile
+           profile.save()
+                  .then(profile => res.json(profile));
+            }
+         })
+         .catch(err => res.status(404).json(err)); 
+})
+
+// @route   /api/profile/education
+// @access  PRIVATE
+// @desc    delete an existing education
+router.delete('/education/:edu_id', passport.authenticate('jwt', {session: false}), (req, res) => {
+  let errors = {};
+
+  Profile.findOne({user: req.user.id})
+         .then(profile => {
+
+          if(!profile){
+            errors.profileNotFound = 'Profile does not exist';
+            return res.status(404).json(errors);
+          }else{
+          // get the index where edu_id is stored in education[]
+          const removeIndex = profile.education
+                                      .map(item => item.id)
+                                      .indexOf(req.params.edu_id);
+          if(removeIndex === -1){
+            errors.educationNotFound = 'Education not Found';
+            return res.status(404).json(errors);
+          }                                     
+          
+          // Splice edu_id out of the array
+          profile.education.splice(removeIndex, 1);
+          // save the profile
+          profile.save().then(profile => res.json(profile));
+          }
+         })
+         .catch(err => res.status(404).json(err));
+})
 
 // @route   /api/profile/
 // @access  Private

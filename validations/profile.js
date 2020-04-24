@@ -28,7 +28,7 @@ module.exports = validateProfileInput = data => {
 
     if(!isEmpty(data.youtube)){
       if(!validator.isURL(data.youtube)){
-        errors.youtube = 'Not a valid youtube link';
+        errors.youtube = 'Not a valid youtube url';
       }
     }
 

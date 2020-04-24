@@ -22,6 +22,7 @@ const postSchema = new schema({
       ref: 'users'
     }
   }],
+  
   comments: [{
     user: {
       type: schema.Types.ObjectId,
@@ -38,7 +39,7 @@ const postSchema = new schema({
       type: String
     },
     date: {
-      type: date,
+      type: Date,
       default: Date.now
     }
   }],

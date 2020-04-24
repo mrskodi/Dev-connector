@@ -130,8 +130,6 @@ router.get('/current',
 // @access  Private
 // @desc    Delete a user
 router.delete('/', passport.authenticate('jwt', {session: false}), (req, res) => {
-  console.log('in the user delete route');
-  console.log(`UserId: ${req.user.id}`);
   User.findOneAndRemove({_id: req.user.id})
       .then(() => res.json({success: true}))
       .catch(err => console.log(err));
