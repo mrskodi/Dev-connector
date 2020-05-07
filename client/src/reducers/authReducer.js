@@ -1,10 +1,10 @@
 import { SET_CURRENT_USER } from '../actions/dispatchTypes';
-import registerUser from '../actions/authAction';
 
 const initialState = {
   isAuthenticated: false,
   user: {}
 }
+const middleware = applyMiddleware[thunk];
 
 export default function(state=initialState, action){
   switch(action.type){
