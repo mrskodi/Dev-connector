@@ -4,7 +4,6 @@ const initialState = {
   isAuthenticated: false,
   user: {}
 }
-const middleware = applyMiddleware[thunk];
 
 export default function(state=initialState, action){
   switch(action.type){
